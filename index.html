@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0D14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Pulse Studio Pro — S26 Ultra</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <!-- LameJS for real client-side MP3 encoding (cached locally on phone) -->
+  <script src="./lame.min.js" defer></script>
+  <!-- Google Identity Services for 1-tap Google Drive OAuth -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-canvas: #0B0D14;
+      --bg-elevated: #111522;
+      --surface-card: #171B29;
+      --surface-hover: #1F2537;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(255, 255, 255, 0.16);
+
+      --accent-indigo: #6366F1;
+      --accent-violet: #8B5CF6;
+      --accent-rose: #F43F5E;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-cyan: #06B6D4;
+
+      --text-primary: #F3F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+
+      --grad-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      --grad-record: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+      --radius-lg: 18px;
+      --radius-md: 13px;
+      --radius-sm: 9px;
+      --safe-top: env(safe-area-inset-top, 12px);
+      --safe-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-top: var(--safe-top);
+      padding-bottom: calc(78px + var(--safe-bottom));
+    }
+
+    /* Top Header */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11, 13, 20, 0.86);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      flex-shrink: 0;
+    }
+
+    .brand-titles {
+      min-width: 0;
+    }
+
+    .brand-title-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-name {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+    }
+
+    .badge-pro {
+      font-size: 9px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 99px;
+      background: var(--grad-primary);
+      color: #fff;
+    }
+
+    .status-line {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+
+    .drive-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 99px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .drive-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    /* Main Container */
+    .container {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .view-section {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .view-section.active {
+      display: flex;
+    }
+
+    /* Glass Studio Cards */
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    .card.recording-active {
+      border-color: rgba(244, 63, 94, 0.55);
+      box-shadow: 0 0 28px rgba(244, 63, 94, 0.18);
+    }
+
+    /* Recorder Header Row */
+    .rec-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .rec-state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .rec-state-badge.live {
+      color: var(--accent-rose);
+    }
+
+    .rec-state-badge.paused {
+      color: var(--accent-amber);
+    }
+
+    .bitrate-pills {
+      display: inline-flex;
+      background: var(--bg-canvas);
+      padding: 3px;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      gap: 2px;
+    }
+
+    .bitrate-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 10.5px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .bitrate-btn.active {
+      background: var(--accent-indigo);
+      color: #fff;
+    }
+
+    /* Timer & Live Visualizer */
+    .timer-display {
+      font-size: 46px;
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-align: center;
+      letter-spacing: -1px;
+      margin: 6px 0;
+      color: var(--text-primary);
+    }
+
+    .timer-display.live {
+      color: #fff;
+      text-shadow: 0 0 18px rgba(244, 63, 94, 0.55);
+    }
+
+    .spectrum-box {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin: 8px 0 14px;
+    }
+
+    .spec-bar {
+      width: 5px;
+      height: 6px;
+      border-radius: 99px;
+      background: rgba(148, 163, 184, 0.25);
+      transition: height 0.06s ease-out, background 0.15s ease;
+    }
+
+    .spec-bar.live {
+      background: linear-gradient(180deg, #8B5CF6 0%, #F43F5E 100%);
+    }
+
+    /* Inputs */
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 13px;
+      margin-bottom: 14px;
+    }
+
+    .input-group input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 13.5px;
+      width: 100%;
+    }
+
+    .input-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.12s ease, opacity 0.15s ease;
+      flex: 1;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-record {
+      background: var(--grad-record);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4);
+    }
+
+    .btn-primary {
+      background: var(--grad-primary);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.38);
+    }
+
+    .btn-pause {
+      background: var(--surface-hover);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text-primary);
+      border: 1px solid var(--border-highlight);
+    }
+
+    .btn-sm {
+      padding: 7px 11px;
+      font-size: 11.5px;
+      border-radius: 8px;
+      flex: initial;
+    }
+
+    /* Library List */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+
+    .section-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.9px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .count-pill {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    .rec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rec-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .rec-item.selected {
+      background: var(--surface-hover);
+      border-color: var(--accent-indigo);
+    }
+
+    .play-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--grad-primary);
+      color: #fff;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .rec-info {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .rec-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .rec-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .tag-emerald {
+      color: var(--accent-emerald);
+      font-weight: 600;
+    }
+
+    .tag-cyan {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .rec-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-canvas);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    /* Transkriptor Player & Studio View */
+    .player-deck {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .track-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .track-title {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .scrubber-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .time-lbl {
+      font-size: 11.5px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--accent-cyan);
+      min-width: 48px;
+    }
+
+    .time-lbl.total {
+      color: var(--text-secondary);
+      text-align: right;
+    }
+
+    input[type="range"].timeline-slider {
+      flex: 1;
+      accent-color: var(--accent-indigo);
+      height: 6px;
+      cursor: pointer;
+    }
+
+    .transport-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .skip-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .skip-btn {
+      background: var(--surface-hover);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 7px 11px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .speed-pills {
+      display: flex;
+      background: var(--bg-canvas);
+      padding: 3px;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      gap: 2px;
+      overflow-x: auto;
+    }
+
+    .speed-pill {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 10.5px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      padding: 5px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .speed-pill.active {
+      background: var(--accent-indigo);
+      color: #fff;
+    }
+
+    /* Speaker Analytics & Language Bar */
+    .analytics-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .speaker-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 9px;
+      font-size: 11.5px;
+      font-weight: 700;
+      background: rgba(99, 102, 241, 0.14);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .lang-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--accent-emerald);
+    }
+
+    /* Transcript Segment Cards */
+    .segments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .seg-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .seg-card.active {
+      background: var(--surface-hover);
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 18px rgba(99, 102, 241, 0.25);
+    }
+
+    .seg-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .seg-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent-indigo);
+    }
+
+    .seg-speaker {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent-indigo);
+      cursor: pointer;
+    }
+
+    .seg-time-btn {
+      background: var(--surface-hover);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent-cyan);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 99px;
+      cursor: pointer;
+    }
+
+    .seg-dur-badge {
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--text-secondary);
+      background: var(--bg-canvas);
+      padding: 3px 8px;
+      border-radius: 99px;
+    }
+
+    .seg-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: rgba(11, 13, 20, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px;
+      width: 100%;
+      resize: vertical;
+      min-height: 54px;
+      font-family: inherit;
+    }
+
+    /* Bottom Navigation Bar (Samsung S26 Ultra One UI Style) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: rgba(17, 21, 34, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border-subtle);
+      padding: 8px 16px calc(8px + var(--safe-bottom));
+      display: flex;
+      justify-content: space-around;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .nav-item {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: #fff;
+      background: rgba(99, 102, 241, 0.18);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+    }
+
+    /* Native Dialog Modal */
+    dialog {
+      margin: auto;
+      background: var(--surface-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-highlight);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      width: min(92vw, 400px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(6px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Studio Bar -->
+  <header class="app-header">
+    <div class="brand-row">
+      <img src="icon-192.png" alt="Pulse Studio" class="brand-logo" />
+      <div class="brand-titles">
+        <div class="brand-title-line">
+          <span class="brand-name">PULSE STUDIO</span>
+          <span class="badge-pro">S26 ULTRA</span>
+        </div>
+        <div class="status-line" id="statusBanner">Prêt à capturer en MP3 • Rec Audio</div>
+      </div>
+    </div>
+
+    <a href="https://drive.google.com/open?id=1grNfx5dTllmi4Xu_s6c7Zr4vygcSME-1" target="_blank" rel="noopener" class="drive-pill">
+      <span class="drive-dot"></span>
+      <span>Rec Audio</span>
+      <span>↗</span>
+    </a>
+  </header>
+
+  <main class="container">
+    <!-- TAB 1: RECORDER & LIBRARY -->
+    <section id="tabRecorder" class="view-section active">
+      <div class="card" id="recorderPod">
+        <div class="rec-top-row">
+          <div class="rec-state-badge" id="recStateBadge">
+            <span class="drive-dot" id="recDot"></span>
+            <span id="recStateText">STUDIO PRÊT</span>
+          </div>
+          <div class="bitrate-pills">
+            <button class="bitrate-btn" data-rate="128">128k</button>
+            <button class="bitrate-btn active" data-rate="192">192k</button>
+            <button class="bitrate-btn" data-rate="320">320k</button>
+          </div>
+        </div>
+
+        <div class="timer-display" id="timerDisplay">00:00.0</div>
+
+        <!-- 28-bar spectrum -->
+        <div class="spectrum-box" id="spectrumBox"></div>
+
+        <div class="input-group">
+          <span>🏷️</span>
+          <input type="text" id="customNameInput" placeholder="Titre de l'enregistrement (optionnel)..." />
+        </div>
+
+        <div class="btn-row" id="recControlsIdle">
+          <button class="btn btn-record" id="btnStartRec">
+            <span>🎙️</span>
+            <span>Capturer en MP3</span>
+          </button>
+        </div>
+
+        <div class="btn-row" id="recControlsActive" style="display: none;">
+          <button class="btn btn-pause" id="btnPauseRec">
+            <span>⏸️</span>
+            <span id="lblPauseRec">Pause</span>
+          </button>
+          <button class="btn btn-primary" id="btnStopRec">
+            <span>⏹️</span>
+            <span>Terminer & Sauver</span>
+          </button>
+        </div>
+
+        <!-- Fallback/Import Audio input for mobile -->
+        <div style="margin-top: 10px; text-align: center;">
+          <label style="font-size: 11px; color: var(--text-secondary); cursor: pointer; text-decoration: underline;">
+            📂 Ou importer / capturer via l'enregistreur natif Samsung S26
+            <input type="file" id="nativeAudioInput" accept="audio/*" style="display: none;" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Audio Library -->
+      <div class="section-header">
+        <span class="section-title">🎵 Bibliothèque Audio MP3</span>
+        <span class="count-pill" id="recCountPill">0</span>
+      </div>
+
+      <div class="rec-list" id="recordingsList"></div>
+    </section>
+
+    <!-- TAB 2: TRANSKRIPTOR STUDIO & PLAYER -->
+    <section id="tabStudio" class="view-section">
+      <div class="player-deck" id="playerDeck">
+        <div class="track-header">
+          <div>
+            <div class="track-title" id="activeTrackTitle">Sélectionnez un enregistrement</div>
+            <div class="rec-meta" id="activeTrackMeta" style="margin-top: 4px;">—</div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" id="btnRenameActive" title="Renommer">✏️ Renommer</button>
+            <button class="btn btn-secondary btn-sm" id="btnShareDrive" title="Envoyer vers Google Drive Rec Audio">☁️ Drive</button>
+          </div>
+        </div>
+
+        <!-- Scrubber -->
+        <div class="scrubber-row">
+          <span class="time-lbl" id="lblCurrentTime">00:00.0</span>
+          <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="0.1" value="0" />
+          <span class="time-lbl total" id="lblTotalTime">00:00.0</span>
+        </div>
+
+        <!-- Transport & Speed Pills -->
+        <div class="transport-controls">
+          <div class="skip-group">
+            <button class="skip-btn" id="btnSkipBack">-5s</button>
+            <button class="play-circle" id="btnMainPlay" style="width: 44px; height: 44px; font-size: 16px;">▶</button>
+            <button class="skip-btn" id="btnSkipFwd">+5s</button>
+          </div>
+
+          <div class="speed-pills" id="speedPills">
+            <button class="speed-pill" data-speed="0.5">0.5×</button>
+            <button class="speed-pill" data-speed="0.75">0.75×</button>
+            <button class="speed-pill active" data-speed="1">1×</button>
+            <button class="speed-pill" data-speed="1.25">1.25×</button>
+            <button class="speed-pill" data-speed="1.5">1.5×</button>
+            <button class="speed-pill" data-speed="1.75">1.75×</button>
+            <button class="speed-pill" data-speed="2">2×</button>
+          </div>
+        </div>
+
+        <!-- Action Row: AI Transcribe + Export -->
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btnRunTranscribe">
+            <span>✨</span>
+            <span id="lblTranscribeBtn">Transcrire (Multilingue & Orateurs)</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnExportTxt" style="display: none;">
+            📄 Exporter .TXT
+          </button>
+        </div>
+      </div>
+
+      <!-- Speaker Analytics & Search -->
+      <div class="card" id="transcriptContainer" style="display: none; gap: 14px; flex-direction: column;">
+        <div class="analytics-bar" id="speakerAnalyticsBar"></div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <span>🔍</span>
+          <input type="text" id="searchTranscriptInput" placeholder="Rechercher un mot, un interlocuteur, une langue..." />
+        </div>
+        <div class="segments-list" id="segmentsList"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: CLOUD & AI SETTINGS -->
+    <section id="tabSettings" class="view-section">
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="track-title">✨ Transcription IA Multilingue & Diarisation</div>
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+          Pour activer la détection ultra-précise des changements de langue en cours de conversation, la séparation des différents interlocuteurs et les horodatages exacts (comme Transkriptor Pro), renseignez votre clé API Google Gemini :
+        </p>
+        <div class="input-group" style="margin-bottom: 4px;">
+          <span>🔑</span>
+          <input type="password" id="geminiKeyInput" placeholder="Clé API Google Gemini (AIzaSy...)" />
+        </div>
+        <button class="btn btn-primary" id="btnSaveAiKey">Enregistrer la clé IA</button>
+      </div>
+
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="track-title">☁️ Synchronisation Google Drive — « Rec Audio »</div>
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+          ID du dossier cible préconfiguré : <code>1grNfx5dTllmi4Xu_s6c7Zr4vygcSME-1</code> (<strong>Mon Drive / Rec Audio</strong>).
+          Sur votre Samsung S26 Ultra, chaque enregistrement peut être envoyé automatiquement via l'API Google Drive ci-dessous, ou en 1 tap via le menu de partage natif Samsung One UI.
+        </p>
+        <div class="input-group" style="margin-bottom: 4px;">
+          <span>📁</span>
+          <input type="text" id="driveFolderIdInput" value="1grNfx5dTllmi4Xu_s6c7Zr4vygcSME-1" />
+        </div>
+        <div class="input-group" style="margin-bottom: 4px;">
+          <span>🔐</span>
+          <input type="password" id="driveTokenInput" placeholder="Jeton d'accès Google Drive OAuth (ya29... optionnel)" />
+        </div>
+        <button class="btn btn-secondary" id="btnSaveDriveSettings">Sauvegarder la configuration Drive</button>
+      </div>
+
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="track-title">🔒 Code PIN Privé de l'Application</div>
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+          Protège l'ouverture de l'application par votre code PIN personnel (Code par défaut : <strong>2026</strong>).
+        </p>
+        <div class="input-group" style="margin-bottom: 4px;">
+          <span>🔢</span>
+          <input type="password" inputmode="numeric" maxlength="8" id="customPinInput" placeholder="Nouveau code PIN (ex: 2026)..." />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btnSaveCustomPin">Modifier mon code PIN</button>
+          <button class="btn btn-secondary" id="btnLockNow">🔒 Verrouiller</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Private PIN Security Lock Screen Overlay -->
+  <div id="pinLockOverlay" style="position:fixed;inset:0;z-index:9999;background:#0B0D14;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <img src="icon-192.png" alt="Pulse Studio" style="width:72px;height:72px;border-radius:18px;box-shadow:0 8px 28px rgba(99,102,241,0.45);margin-bottom:16px;" />
+    <div style="font-size:18px;font-weight:800;letter-spacing:0.5px;margin-bottom:4px;">PULSE STUDIO PRO</div>
+    <div style="font-size:12px;color:#94A3B8;margin-bottom:22px;" id="pinPromptText">Accès Privé Verrouillé • Entrez votre code PIN</div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;width:100%;max-width:260px;">
+      <input type="password" inputmode="numeric" id="pinUnlockInput" placeholder="••••" style="width:100%;text-align:center;font-size:24px;letter-spacing:8px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.16);background:#171B29;color:#fff;outline:none;" />
+    </div>
+    <button class="btn btn-primary" id="btnUnlockPin" style="width:100%;max-width:260px;flex:initial;">🔓 Déverrouiller</button>
+  </div>
+
+  <!-- Rename Modal Dialog -->
+  <dialog id="renameDialog">
+    <h3 style="margin-bottom: 12px; font-size: 16px;" id="renameDialogTitle">Renommer</h3>
+    <div class="input-group">
+      <input type="text" id="renameModalInput" placeholder="Nouveau nom..." />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="btnCancelModal">Annuler</button>
+      <button class="btn btn-primary" id="btnConfirmModal">Valider</button>
+    </div>
+  </dialog>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tabRecorder">
+      <span class="nav-icon">🎙️</span>
+      <span>Enregistreur</span>
+    </button>
+    <button class="nav-item" data-tab="tabStudio">
+      <span class="nav-icon">✨</span>
+      <span>Transkriptor</span>
+    </button>
+    <button class="nav-item" data-tab="tabSettings">
+      <span class="nav-icon">⚙️</span>
+      <span>Drive & IA</span>
+    </button>
+  </nav>
+
+  <script>
+    // --- Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    // --- IndexedDB Storage for MP3 Blobs & Transcripts ---
+    const DB_NAME = 'PulseStudioS26DB';
+    const STORE_NAME = 'recordings';
+    let db = null;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains(STORE_NAME)) {
+            d.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => {
+          db = e.target.result;
+          resolve(db);
+        };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    async function getAllRecordings() {
+      await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = () => {
+          const items = (req.result || []).sort((a, b) => b.date - a.date);
+          resolve(items);
+        };
+        req.onerror = () => resolve([]);
+      });
+    }
+
+    async function saveRecordingToDB(rec) {
+      await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(rec);
+        tx.oncomplete = () => resolve(true);
+      });
+    }
+
+    async function deleteRecordingFromDB(id) {
+      await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = () => resolve(true);
+      });
+    }
+
+    // --- State ---
+    let recordings = [];
+    let selectedId = null;
+    let selectedBitrate = 192;
+    let isRecording = false;
+    let isPaused = false;
+    let recStartTime = 0;
+    let recAccumulated = 0;
+    let recTimerInterval = null;
+
+    // WebAudio & MP3 Encoder State
+    let mediaStream = null;
+    let audioCtx = null;
+    let analyser = null;
+    let scriptProcessor = null;
+    let mp3Encoder = null;
+    let mp3Chunks = [];
+    let liveSpeechRecognizer = null;
+    let liveDraftSegments = [];
+
+    // Audio Player State
+    const audioPlayer = new Audio();
+    audioPlayer.preservesPitch = true;
+    let currentSpeed = 1.0;
+
+    // UI Elements
+    const statusBanner = document.getElementById('statusBanner');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const spectrumBox = document.getElementById('spectrumBox');
+    const recorderPod = document.getElementById('recorderPod');
+    const recStateBadge = document.getElementById('recStateBadge');
+    const recStateText = document.getElementById('recStateText');
+    const customNameInput = document.getElementById('customNameInput');
+    const recControlsIdle = document.getElementById('recControlsIdle');
+    const recControlsActive = document.getElementById('recControlsActive');
+    const recordingsList = document.getElementById('recordingsList');
+    const recCountPill = document.getElementById('recCountPill');
+
+    // Initialize 28 Spectrum Bars
+    const NUM_BARS = 28;
+    const specBarEls = [];
+    for (let i = 0; i < NUM_BARS; i++) {
+      const b = document.createElement('div');
+      b.className = 'spec-bar';
+      spectrumBox.appendChild(b);
+      specBarEls.push(b);
+    }
+
+    function setStatus(msg, isError = false) {
+      statusBanner.textContent = msg;
+      statusBanner.style.color = isError ? '#F43F5E' : '#94A3B8';
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, Number(sec) || 0);
+      const mins = Math.floor(s / 60);
+      const secs = Math.floor(s % 60);
+      const tenths = Math.floor((s - Math.floor(s)) * 10);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '0 KB';
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    // --- Navigation Tabs ---
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-section').forEach((s) => s.classList.remove('active'));
+      document.getElementById(tabId)?.classList.add('active');
+      document.querySelectorAll('.nav-item').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === tabId);
+      });
+    }
+
+    document.querySelectorAll('.nav-item').forEach((btn) => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // --- Bitrate Selection ---
+    document.querySelectorAll('.bitrate-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (isRecording) return;
+        selectedBitrate = Number(btn.dataset.rate);
+        document.querySelectorAll('.bitrate-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // --- Language Detection Helper ---
+    function detectLanguageInfo(text) {
+      const t = (text || '').trim();
+      if (/[\u0600-\u06FF]/.test(t)) return { code: 'ar', label: '🇸🇦 العربية' };
+      const lower = ` ${t.toLowerCase()} `;
+      const enWords = [' the ', ' and ', ' is ', ' are ', ' you ', ' with ', ' this ', ' that ', ' have ', ' from '];
+      const esWords = [' el ', ' la ', ' que ', ' en ', ' los ', ' por ', ' con ', ' para ', ' una '];
+      const frWords = [' le ', ' la ', ' les ', ' des ', ' est ', ' dans ', ' pour ', ' avec ', ' nous ', ' vous ', ' pas '];
+
+      let enScore = enWords.filter((w) => lower.includes(w)).length;
+      let esScore = esWords.filter((w) => lower.includes(w)).length;
+      let frScore = frWords.filter((w) => lower.includes(w)).length;
+
+      if (enScore > frScore && enScore > esScore) return { code: 'en', label: '🇬🇧 English' };
+      if (esScore > frScore && esScore > enScore) return { code: 'es', label: '🇪🇸 Español' };
+      return { code: 'fr', label: '🇫🇷 Français' };
+    }
+
+    // --- Live MP3 Recording ---
+    async function startRecording() {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 44100
+          }
+        });
+      } catch (err) {
+        setStatus("Accès micro refusé ou HTTPS requis. Utilisez le bouton d'import/capture Samsung ci-dessous.", true);
+        return;
+      }
+
+      audioPlayer.pause();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+      const source = audioCtx.createMediaStreamSource(mediaStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+
+      mp3Chunks = [];
+      if (window.lamejs) {
+        mp3Encoder = new lamejs.Mp3Encoder(1, audioCtx.sampleRate, selectedBitrate);
+      } else {
+        mp3Encoder = null;
+      }
+
+      scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+      scriptProcessor.onaudioprocess = (e) => {
+        if (!isRecording || isPaused) return;
+        const input = e.inputBuffer.getChannelData(0);
+        if (mp3Encoder) {
+          const samples = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+            const s = Math.max(-1, Math.min(1, input[i]));
+            samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          const mp3buf = mp3Encoder.encodeBuffer(samples);
+          if (mp3buf.length > 0) mp3Chunks.push(new Int8Array(mp3buf));
+        }
+      };
+
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioCtx.destination);
+
+      // Optional live WebSpeech recognition during recording
+      liveDraftSegments = [];
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRec) {
+        try {
+          liveSpeechRecognizer = new SpeechRec();
+          liveSpeechRecognizer.continuous = true;
+          liveSpeechRecognizer.interimResults = false;
+          liveSpeechRecognizer.onresult = (ev) => {
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+              if (ev.results[i].isFinal) {
+                const txt = ev.results[i][0].transcript.trim();
+                if (txt) {
+                  const nowElapsed = getElapsedSeconds();
+                  const estDur = Math.max(1.2, Math.min(12, txt.split(/\s+/).length * 0.42));
+                  const lang = detectLanguageInfo(txt);
+                  liveDraftSegments.push({
+                    id: crypto.randomUUID(),
+                    speaker: (liveDraftSegments.length % 2 === 0) ? 'Interlocuteur 1' : 'Interlocuteur 2',
+                    startTime: Math.max(0, nowElapsed - estDur),
+                    endTime: nowElapsed,
+                    languageCode: lang.code,
+                    languageLabel: lang.label,
+                    text: txt
+                  });
+                }
+              }
+            }
+          };
+          liveSpeechRecognizer.start();
+        } catch (_) {}
+      }
+
+      isRecording = true;
+      isPaused = false;
+      recAccumulated = 0;
+      recStartTime = performance.now();
+
+      recorderPod.classList.add('recording-active');
+      recStateBadge.className = 'rec-state-badge live';
+      recStateText.textContent = 'EN DIRECT • MP3';
+      timerDisplay.classList.add('live');
+      recControlsIdle.style.display = 'none';
+      recControlsActive.style.display = 'flex';
+      setStatus(`Capture MP3 (${selectedBitrate} kbps) en cours...`);
+
+      recTimerInterval = setInterval(updateRecordingUI, 50);
+    }
+
+    function getElapsedSeconds() {
+      if (!isRecording) return 0;
+      if (isPaused) return recAccumulated;
+      return recAccumulated + (performance.now() - recStartTime) / 1000;
+    }
+
+    function updateRecordingUI() {
+      const elapsed = getElapsedSeconds();
+      timerDisplay.textContent = formatTime(elapsed);
+
+      if (analyser && !isPaused) {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        for (let i = 0; i < NUM_BARS; i++) {
+          const val = data[i % data.length] / 255;
+          const h = Math.max(6, Math.round(val * 44));
+          specBarEls[i].style.height = `${h}px`;
+          specBarEls[i].classList.add('live');
+        }
+      }
+    }
+
+    function togglePauseRecording() {
+      if (!isRecording) return;
+      const lbl = document.getElementById('lblPauseRec');
+      if (!isPaused) {
+        recAccumulated += (performance.now() - recStartTime) / 1000;
+        isPaused = true;
+        lbl.textContent = 'Reprendre';
+        recStateBadge.className = 'rec-state-badge paused';
+        recStateText.textContent = 'EN PAUSE';
+        specBarEls.forEach((b) => { b.style.height = '6px'; b.classList.remove('live'); });
+        setStatus('Enregistrement en pause');
+      } else {
+        recStartTime = performance.now();
+        isPaused = false;
+        lbl.textContent = 'Pause';
+        recStateBadge.className = 'rec-state-badge live';
+        recStateText.textContent = 'EN DIRECT • MP3';
+        setStatus('Capture MP3 reprise...');
+      }
+    }
+
+    async function stopRecording() {
+      if (!isRecording) return;
+      const finalDuration = Math.max(1, getElapsedSeconds());
+      isRecording = false;
+      isPaused = false;
+      clearInterval(recTimerInterval);
+
+      if (liveSpeechRecognizer) {
+        try { liveSpeechRecognizer.stop(); } catch (_) {}
+        liveSpeechRecognizer = null;
+      }
+
+      if (mp3Encoder) {
+        const endBuf = mp3Encoder.flush();
+        if (endBuf.length > 0) mp3Chunks.push(new Int8Array(endBuf));
+      }
+
+      if (scriptProcessor) scriptProcessor.disconnect();
+      if (audioCtx) await audioCtx.close();
+      if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+
+      recorderPod.classList.remove('recording-active');
+      recStateBadge.className = 'rec-state-badge';
+      recStateText.textContent = 'STUDIO PRÊT';
+      timerDisplay.classList.remove('live');
+      timerDisplay.textContent = '00:00.0';
+      specBarEls.forEach((b) => { b.style.height = '6px'; b.classList.remove('live'); });
+      recControlsActive.style.display = 'none';
+      recControlsIdle.style.display = 'flex';
+
+      const mp3Blob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
+      const now = new Date();
+      const stamp = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+      const rawName = customNameInput.value.trim().replace(/[/:]/g, '-');
+      const baseName = rawName || `Session_${stamp}`;
+      const fileName = baseName.toLowerCase().endsWith('.mp3') ? baseName : `${baseName}.mp3`;
+      customNameInput.value = '';
+
+      const newRec = {
+        id: crypto.randomUUID(),
+        name: fileName,
+        date: Date.now(),
+        duration: finalDuration,
+        fileSize: mp3Blob.size,
+        blob: mp3Blob,
+        syncedDrive: false,
+        transcript: liveDraftSegments.length > 0 ? liveDraftSegments : null
+      };
+
+      await saveRecordingToDB(newRec);
+      recordings.unshift(newRec);
+      selectedId = newRec.id;
+      renderLibrary();
+      loadSelectedIntoStudio();
+
+      // Auto-upload to Google Drive Rec Audio if token configured
+      const driveToken = localStorage.getItem('pulse_drive_token') || '';
+      if (driveToken) {
+        await uploadToGoogleDriveRecAudio(newRec, driveToken);
+      } else {
+        setStatus(`MP3 enregistré (${fileName}) • Prêt pour Rec Audio`);
+      }
+    }
+
+    // Handle native file import / Samsung S26 microphone capture
+    document.getElementById('nativeAudioInput').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const tempAudio = document.createElement('audio');
+      const objUrl = URL.createObjectURL(file);
+      tempAudio.src = objUrl;
+      await new Promise((r) => {
+        tempAudio.onloadedmetadata = r;
+        tempAudio.onerror = r;
+      });
+      const dur = Number.isFinite(tempAudio.duration) ? tempAudio.duration : 5;
+      URL.revokeObjectURL(objUrl);
+
+      const fileName = file.name.toLowerCase().endsWith('.mp3') ? file.name : `${file.name.replace(/\.[^.]+$/, '')}.mp3`;
+      const newRec = {
+        id: crypto.randomUUID(),
+        name: fileName,
+        date: Date.now(),
+        duration: dur,
+        fileSize: file.size,
+        blob: file,
+        syncedDrive: false,
+        transcript: null
+      };
+      await saveRecordingToDB(newRec);
+      recordings.unshift(newRec);
+      selectedId = newRec.id;
+      renderLibrary();
+      loadSelectedIntoStudio();
+      switchTab('tabStudio');
+      setStatus(`Audio « ${fileName} » importé dans le studio ✓`);
+    });
+
+    document.getElementById('btnStartRec').addEventListener('click', startRecording);
+    document.getElementById('btnPauseRec').addEventListener('click', togglePauseRecording);
+    document.getElementById('btnStopRec').addEventListener('click', stopRecording);
+
+    // --- Google Drive Rec Audio Upload & Native One UI Share ---
+    async function uploadToGoogleDriveRecAudio(rec, token) {
+      const folderId = (localStorage.getItem('pulse_drive_folder_id') || '1grNfx5dTllmi4Xu_s6c7Zr4vygcSME-1').trim();
+      setStatus(`Envoi de ${rec.name} vers Google Drive (Rec Audio)...`);
+
+      const metadata = {
+        name: rec.name,
+        mimeType: 'audio/mpeg',
+        parents: [folderId]
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', rec.blob, rec.name);
+
+      try {
+        const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form
+        });
+        if (res.ok) {
+          rec.syncedDrive = true;
+          await saveRecordingToDB(rec);
+          renderLibrary();
+          loadSelectedIntoStudio();
+          setStatus(`Synchronisé automatiquement dans Mon Drive/Rec Audio ✓`);
+          return true;
+        }
+      } catch (_) {}
+      setStatus(`Erreur token Cloud. Utilisez le bouton ☁️ Drive pour partager vers Rec Audio.`, true);
+      return false;
+    }
+
+    async function shareOrSaveToDrive(rec) {
+      const token = localStorage.getItem('pulse_drive_token') || '';
+      if (token) {
+        const ok = await uploadToGoogleDriveRecAudio(rec, token);
+        if (ok) return;
+      }
+
+      // Native Samsung S26 Ultra One UI Share Sheet (lets user pick Google Drive app in 1 tap!)
+      const file = new File([rec.blob], rec.name, { type: 'audio/mpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: rec.name,
+            text: 'Enregistrement MP3 — Dossier Google Drive Rec Audio',
+            files: [file]
+          });
+          rec.syncedDrive = true;
+          await saveRecordingToDB(rec);
+          renderLibrary();
+          loadSelectedIntoStudio();
+          setStatus(`Partagé vers Google Drive (Rec Audio) ✓`);
+          return;
+        } catch (_) {}
+      }
+
+      // Fallback direct download
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(rec.blob);
+      a.download = rec.name;
+      a.click();
+      setStatus(`Fichier ${rec.name} téléchargé sur l'appareil ✓`);
+    }
+
+    // --- Render Library ---
+    function renderLibrary() {
+      recCountPill.textContent = String(recordings.length);
+      recordingsList.innerHTML = '';
+
+      if (recordings.length === 0) {
+        recordingsList.innerHTML = `
+          <div class="card" style="text-align: center; color: var(--text-secondary); font-size: 13px;">
+            Aucun enregistrement MP3 pour le moment.<br/>Appuyez sur <strong>Capturer en MP3</strong> ci-dessus.
+          </div>
+        `;
+        return;
+      }
+
+      recordings.forEach((rec) => {
+        const item = document.createElement('div');
+        item.className = `rec-item ${rec.id === selectedId ? 'selected' : ''}`;
+
+        const segCount = rec.transcript ? rec.transcript.length : 0;
+        item.innerHTML = `
+          <button class="play-circle" data-action="play">▶</button>
+          <div class="rec-info" data-action="select">
+            <div class="rec-name">${escapeHtml(rec.name)}</div>
+            <div class="rec-meta">
+              <span>⏱ ${formatTime(rec.duration)}</span>
+              <span>•</span>
+              <span>${formatBytes(rec.fileSize)}</span>
+              ${rec.syncedDrive ? '<span class="tag-emerald">• ☁️ Rec Audio ✓</span>' : ''}
+              ${segCount > 0 ? `<span class="tag-cyan">• ✨ ${segCount} seg.</span>` : ''}
+            </div>
+          </div>
+          <div class="rec-actions">
+            <button class="icon-btn" data-action="rename" title="Renommer">✏️</button>
+            <button class="icon-btn" data-action="drive" title="Envoyer vers Google Drive">☁️</button>
+            <button class="icon-btn" data-action="delete" title="Supprimer">🗑️</button>
+          </div>
+        `;
+
+        item.querySelector('[data-action="select"]').addEventListener('click', () => {
+          selectedId = rec.id;
+          renderLibrary();
+          loadSelectedIntoStudio();
+          switchTab('tabStudio');
+        });
+
+        item.querySelector('[data-action="play"]').addEventListener('click', () => {
+          selectedId = rec.id;
+          renderLibrary();
+          loadSelectedIntoStudio(true);
+          switchTab('tabStudio');
+        });
+
+        item.querySelector('[data-action="rename"]').addEventListener('click', () => {
+          openRenameModal('Renommer le fichier MP3', rec.name.replace(/\.mp3$/i, ''), async (newVal) => {
+            const clean = newVal.trim().replace(/[/:]/g, '-');
+            if (!clean) return;
+            rec.name = clean.toLowerCase().endsWith('.mp3') ? clean : `${clean}.mp3`;
+            await saveRecordingToDB(rec);
+            renderLibrary();
+            loadSelectedIntoStudio();
+            setStatus(`Renommé en « ${rec.name} » ✓`);
+          });
+        });
+
+        item.querySelector('[data-action="drive"]').addEventListener('click', () => {
+          shareOrSaveToDrive(rec);
+        });
+
+        item.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+          await deleteRecordingFromDB(rec.id);
+          recordings = recordings.filter((r) => r.id !== rec.id);
+          if (selectedId === rec.id) selectedId = recordings[0]?.id || null;
+          renderLibrary();
+          loadSelectedIntoStudio();
+        });
+
+        recordingsList.appendChild(item);
+      });
+    }
+
+    // --- Studio Player & Transkriptor Workspace ---
+    let currentObjectURL = null;
+
+    function getSelectedRecording() {
+      return recordings.find((r) => r.id === selectedId) || null;
+    }
+
+    function loadSelectedIntoStudio(autoPlay = false) {
+      const rec = getSelectedRecording();
+      const titleEl = document.getElementById('activeTrackTitle');
+      const metaEl = document.getElementById('activeTrackMeta');
+      const slider = document.getElementById('timelineSlider');
+      const totalLbl = document.getElementById('lblTotalTime');
+      const currLbl = document.getElementById('lblCurrentTime');
+
+      if (!rec) {
+        titleEl.textContent = 'Sélectionnez un enregistrement';
+        metaEl.textContent = '—';
+        document.getElementById('transcriptContainer').style.display = 'none';
+        return;
+      }
+
+      titleEl.textContent = rec.name;
+      metaEl.innerHTML = `${new Date(rec.date).toLocaleString('fr-FR')} • ${formatBytes(rec.fileSize)} ${rec.syncedDrive ? '• <span class="tag-emerald">Rec Audio ✓</span>' : ''}`;
+
+      if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
+      currentObjectURL = URL.createObjectURL(rec.blob);
+      audioPlayer.src = currentObjectURL;
+      audioPlayer.playbackRate = currentSpeed;
+      audioPlayer.preservesPitch = true;
+
+      slider.max = Math.max(0.5, rec.duration);
+      slider.value = 0;
+      currLbl.textContent = '00:00.0';
+      totalLbl.textContent = formatTime(rec.duration);
+      document.getElementById('btnMainPlay').textContent = '▶';
+
+      renderTranscriptWorkspace(rec);
+
+      if (autoPlay) {
+        audioPlayer.play().then(() => {
+          document.getElementById('btnMainPlay').textContent = '⏸';
+        }).catch(() => {});
+      }
+    }
+
+    audioPlayer.addEventListener('timeupdate', () => {
+      const t = audioPlayer.currentTime;
+      document.getElementById('timelineSlider').value = t;
+      document.getElementById('lblCurrentTime').textContent = formatTime(t);
+      highlightActiveSegment(t);
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      document.getElementById('btnMainPlay').textContent = '▶';
+    });
+
+    document.getElementById('btnMainPlay').addEventListener('click', () => {
+      if (!getSelectedRecording()) return;
+      if (audioPlayer.paused) {
+        audioPlayer.playbackRate = currentSpeed;
+        audioPlayer.play();
+        document.getElementById('btnMainPlay').textContent = '⏸';
+      } else {
+        audioPlayer.pause();
+        document.getElementById('btnMainPlay').textContent = '▶';
+      }
+    });
+
+    document.getElementById('timelineSlider').addEventListener('input', (e) => {
+      const val = Number(e.target.value);
+      audioPlayer.currentTime = val;
+      document.getElementById('lblCurrentTime').textContent = formatTime(val);
+      highlightActiveSegment(val);
+    });
+
+    document.getElementById('btnSkipBack').addEventListener('click', () => {
+      audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 5);
+    });
+
+    document.getElementById('btnSkipFwd').addEventListener('click', () => {
+      audioPlayer.currentTime = Math.min(audioPlayer.duration || 9999, audioPlayer.currentTime + 5);
+    });
+
+    document.querySelectorAll('.speed-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        currentSpeed = Number(pill.dataset.speed);
+        audioPlayer.playbackRate = currentSpeed;
+        audioPlayer.preservesPitch = true;
+        document.querySelectorAll('.speed-pill').forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+      });
+    });
+
+    document.getElementById('btnRenameActive').addEventListener('click', () => {
+      const rec = getSelectedRecording();
+      if (!rec) return;
+      openRenameModal('Renommer le fichier MP3', rec.name.replace(/\.mp3$/i, ''), async (newVal) => {
+        const clean = newVal.trim().replace(/[/:]/g, '-');
+        if (!clean) return;
+        rec.name = clean.toLowerCase().endsWith('.mp3') ? clean : `${clean}.mp3`;
+        await saveRecordingToDB(rec);
+        renderLibrary();
+        loadSelectedIntoStudio();
+        setStatus(`Renommé en « ${rec.name} » ✓`);
+      });
+    });
+
+    document.getElementById('btnShareDrive').addEventListener('click', () => {
+      const rec = getSelectedRecording();
+      if (rec) shareOrSaveToDrive(rec);
+    });
+
+    // --- Transkriptor AI Multilingual & Speaker Diarization ---
+    document.getElementById('btnRunTranscribe').addEventListener('click', async () => {
+      const rec = getSelectedRecording();
+      if (!rec) return;
+
+      const apiKey = (localStorage.getItem('pulse_gemini_key') || '').trim();
+      const btnLbl = document.getElementById('lblTranscribeBtn');
+      btnLbl.textContent = 'Analyse multilingue & orateurs en cours...';
+      setStatus('Transcription IA multilingue et diarisation des locuteurs en cours...');
+
+      if (apiKey) {
+        try {
+          const base64Audio = await blobToBase64(rec.blob);
+          const prompt = `Tu es un système expert de transcription audio multilingue et de diarisation des locuteurs (comme Transkriptor).
+Analyse cet enregistrement audio et retourne UNIQUEMENT un tableau JSON valide contenant chaque prise de parole dans l'ordre chronologique.
+1. Détecte automatiquement la langue parlée dans chaque segment, y compris en cas de changement de langue en cours de conversation (fr, en, ar, es, de, etc.).
+2. Identifie les différents interlocuteurs ("Interlocuteur 1", "Interlocuteur 2", etc.).
+3. Donne "startTime" et "endTime" en secondes décimales.
+Format JSON attendu :
+[{"speaker":"Interlocuteur 1","startTime":0.0,"endTime":3.8,"languageCode":"fr","text":"..."}]`;
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: prompt },
+                  { inline_data: { mime_type: 'audio/mp3', data: base64Audio } }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json'
+              }
+            })
+          });
+
+          const data = await res.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+          const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            rec.transcript = parsed.map((item) => {
+              const lang = getLangLabelFromCode(item.languageCode || 'fr');
+              return {
+                id: crypto.randomUUID(),
+                speaker: item.speaker || 'Interlocuteur 1',
+                startTime: Number(item.startTime) || 0,
+                endTime: Math.max((Number(item.startTime) || 0) + 0.4, Number(item.endTime) || rec.duration),
+                languageCode: lang.code,
+                languageLabel: lang.label,
+                text: (item.text || '').trim()
+              };
+            });
+            await saveRecordingToDB(rec);
+            renderLibrary();
+            renderTranscriptWorkspace(rec);
+            btnLbl.textContent = 'Actualiser la transcription';
+            setStatus('Transcription IA multilingue terminée ✓');
+            return;
+          }
+        } catch (err) {
+          setStatus(`Erreur API Gemini : ${err.message}`, true);
+        }
+      }
+
+      // Fallback acoustic segmentation if no Gemini key is set yet
+      if (!rec.transcript || rec.transcript.length === 0) {
+        rec.transcript = [
+          {
+            id: crypto.randomUUID(),
+            speaker: 'Interlocuteur 1',
+            startTime: 0.0,
+            endTime: Math.max(1.0, Number((rec.duration * 0.5).toFixed(1))),
+            languageCode: 'fr',
+            languageLabel: '🇫🇷 Français',
+            text: "(Ajoutez votre clé API Google Gemini gratuite dans l'onglet ⚙️ Drive & IA pour transcrire automatiquement les fichiers MP3 pré-enregistrés avec détection multilingue et séparation des orateurs, ou éditez ce bloc directement.)"
+          }
+        ];
+        await saveRecordingToDB(rec);
+      }
+      renderLibrary();
+      renderTranscriptWorkspace(rec);
+      btnLbl.textContent = 'Actualiser la transcription';
+    });
+
+    function getLangLabelFromCode(code) {
+      const c = String(code || 'fr').toLowerCase();
+      if (c.startsWith('fr')) return { code: 'fr', label: '🇫🇷 Français' };
+      if (c.startsWith('en')) return { code: 'en', label: '🇬🇧 English' };
+      if (c.startsWith('ar')) return { code: 'ar', label: '🇸🇦 العربية' };
+      if (c.startsWith('es')) return { code: 'es', label: '🇪🇸 Español' };
+      if (c.startsWith('de')) return { code: 'de', label: '🇩🇪 Deutsch' };
+      return { code: c, label: `🌐 ${c.toUpperCase()}` };
+    }
+
+    function speakerColor(name) {
+      const palette = ['#6366F1', '#06B6D4', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h += name.charCodeAt(i);
+      return palette[h % palette.length];
+    }
+
+    function renderTranscriptWorkspace(rec) {
+      const container = document.getElementById('transcriptContainer');
+      const exportBtn = document.getElementById('btnExportTxt');
+      const analyticsBar = document.getElementById('speakerAnalyticsBar');
+      const listEl = document.getElementById('segmentsList');
+
+      if (!rec.transcript || rec.transcript.length === 0) {
+        container.style.display = 'none';
+        exportBtn.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'flex';
+      exportBtn.style.display = 'inline-flex';
+
+      // Build Speaker Analytics Summary
+      const totals = {};
+      let sumDur = 0;
+      const langs = new Set();
+      rec.transcript.forEach((s) => {
+        const d = Math.max(0.1, s.endTime - s.startTime);
+        totals[s.speaker] = (totals[s.speaker] || 0) + d;
+        sumDur += d;
+        langs.add(s.languageLabel);
+      });
+
+      analyticsBar.innerHTML = '';
+      Object.entries(totals).forEach(([spk, dur]) => {
+        const pct = Math.round((dur / Math.max(0.1, sumDur)) * 100);
+        const col = speakerColor(spk);
+        const chip = document.createElement('button');
+        chip.className = 'speaker-chip';
+        chip.style.borderColor = col;
+        chip.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${col};"></span><span>${escapeHtml(spk)}</span><span style="color:${col};">${dur.toFixed(1)}s (${pct}%) ✏️</span>`;
+        chip.addEventListener('click', () => {
+          openRenameModal(`Renommer « ${spk} »`, spk, async (newName) => {
+            const clean = newName.trim();
+            if (!clean) return;
+            rec.transcript.forEach((seg) => {
+              if (seg.speaker === spk) seg.speaker = clean;
+            });
+            await saveRecordingToDB(rec);
+            renderTranscriptWorkspace(rec);
+          });
+        });
+        analyticsBar.appendChild(chip);
+      });
+
+      langs.forEach((l) => {
+        const lc = document.createElement('span');
+        lc.className = 'lang-chip';
+        lc.textContent = l;
+        analyticsBar.appendChild(lc);
+      });
+
+      // Render Segment Cards
+      const query = (document.getElementById('searchTranscriptInput').value || '').toLowerCase();
+      listEl.innerHTML = '';
+
+      rec.transcript.forEach((seg) => {
+        if (query && !seg.text.toLowerCase().includes(query) && !seg.speaker.toLowerCase().includes(query) && !seg.languageLabel.toLowerCase().includes(query)) {
+          return;
+        }
+        const dur = Math.max(0.1, seg.endTime - seg.startTime);
+        const col = speakerColor(seg.speaker);
+        const card = document.createElement('div');
+        card.className = 'seg-card';
+        card.dataset.start = seg.startTime;
+        card.dataset.end = seg.endTime;
+
+        const initials = seg.speaker.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+        card.innerHTML = `
+          <div class="seg-header">
+            <span class="seg-avatar" style="background:${col};">${escapeHtml(initials)}</span>
+            <span class="seg-speaker" style="color:${col};">${escapeHtml(seg.speaker)}</span>
+            <button class="seg-time-btn">▶ ${formatTime(seg.startTime)} → ${formatTime(seg.endTime)}</button>
+            <span class="seg-dur-badge">⏱ Durée : ${dur.toFixed(1)}s</span>
+            <span class="lang-chip" style="margin-left:auto;">${escapeHtml(seg.languageLabel)}</span>
+          </div>
+          <textarea class="seg-text">${escapeHtml(seg.text)}</textarea>
+        `;
+
+        card.querySelector('.seg-time-btn').addEventListener('click', () => {
+          audioPlayer.currentTime = seg.startTime;
+          audioPlayer.playbackRate = currentSpeed;
+          audioPlayer.play();
+          document.getElementById('btnMainPlay').textContent = '⏸';
+        });
+
+        card.querySelector('.seg-text').addEventListener('change', async (e) => {
+          seg.text = e.target.value;
+          const detected = detectLanguageInfo(seg.text);
+          seg.languageCode = detected.code;
+          seg.languageLabel = detected.label;
+          await saveRecordingToDB(rec);
+        });
+
+        listEl.appendChild(card);
+      });
+    }
+
+    document.getElementById('searchTranscriptInput').addEventListener('input', () => {
+      const rec = getSelectedRecording();
+      if (rec) renderTranscriptWorkspace(rec);
+    });
+
+    function highlightActiveSegment(currentTime) {
+      document.querySelectorAll('.seg-card').forEach((card) => {
+        const st = Number(card.dataset.start);
+        const en = Number(card.dataset.end);
+        card.classList.toggle('active', currentTime >= st && currentTime <= en);
+      });
+    }
+
+    // Export Transcript TXT
+    document.getElementById('btnExportTxt').addEventListener('click', () => {
+      const rec = getSelectedRecording();
+      if (!rec || !rec.transcript) return;
+      const lines = [
+        '=================================================================',
+        `TRANSCRIPTION AUDIO : ${rec.name}`,
+        `Durée totale : ${formatTime(rec.duration)}`,
+        '=================================================================\n'
+      ];
+      rec.transcript.forEach((seg) => {
+        const dur = Math.max(0.1, seg.endTime - seg.startTime).toFixed(1);
+        lines.push(`[${formatTime(seg.startTime)} -> ${formatTime(seg.endTime)} | Durée: ${dur}s] ${seg.speaker} (${seg.languageLabel}) :`);
+        lines.push(seg.text);
+        lines.push('');
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const txtName = `${rec.name.replace(/\.mp3$/i, '')}_Transcription.txt`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = txtName;
+      a.click();
+      setStatus(`Transcription exportée (${txtName}) ✓`);
+    });
+
+    // --- Modal Helper ---
+    const renameDialog = document.getElementById('renameDialog');
+    let modalCallback = null;
+
+    function openRenameModal(title, currentVal, onConfirm) {
+      document.getElementById('renameDialogTitle').textContent = title;
+      const inp = document.getElementById('renameModalInput');
+      inp.value = currentVal;
+      modalCallback = onConfirm;
+      renameDialog.showModal();
+      inp.focus();
+    }
+
+    document.getElementById('btnCancelModal').addEventListener('click', () => renameDialog.close());
+    document.getElementById('btnConfirmModal').addEventListener('click', () => {
+      const val = document.getElementById('renameModalInput').value;
+      renameDialog.close();
+      if (modalCallback) modalCallback(val);
+    });
+
+    // --- Settings Persistence ---
+    document.getElementById('geminiKeyInput').value = localStorage.getItem('pulse_gemini_key') || '';
+    document.getElementById('driveFolderIdInput').value = localStorage.getItem('pulse_drive_folder_id') || '1grNfx5dTllmi4Xu_s6c7Zr4vygcSME-1';
+    document.getElementById('driveTokenInput').value = localStorage.getItem('pulse_drive_token') || '';
+
+    document.getElementById('btnSaveAiKey').addEventListener('click', () => {
+      localStorage.setItem('pulse_gemini_key', document.getElementById('geminiKeyInput').value.trim());
+      setStatus('Clé IA Google Gemini enregistrée ✓');
+    });
+
+    document.getElementById('btnSaveDriveSettings').addEventListener('click', () => {
+      localStorage.setItem('pulse_drive_folder_id', document.getElementById('driveFolderIdInput').value.trim());
+      localStorage.setItem('pulse_drive_token', document.getElementById('driveTokenInput').value.trim());
+      setStatus('Configuration Google Drive Rec Audio enregistrée ✓');
+    });
+
+    // --- Private PIN Security Lock ---
+    const pinLockOverlay = document.getElementById('pinLockOverlay');
+    const pinUnlockInput = document.getElementById('pinUnlockInput');
+    const pinPromptText = document.getElementById('pinPromptText');
+
+    function getExpectedPin() {
+      return localStorage.getItem('pulse_custom_pin') || '2026';
+    }
+
+    if (localStorage.getItem('pulse_pin_unlocked') === 'true') {
+      pinLockOverlay.style.display = 'none';
+    }
+
+    function attemptUnlock() {
+      const entered = pinUnlockInput.value.trim();
+      if (entered === getExpectedPin()) {
+        localStorage.setItem('pulse_pin_unlocked', 'true');
+        pinLockOverlay.style.display = 'none';
+        pinUnlockInput.value = '';
+      } else {
+        pinPromptText.textContent = '❌ Code PIN incorrect. Réessayez.';
+        pinPromptText.style.color = '#F43F5E';
+        pinUnlockInput.value = '';
+      }
+    }
+
+    document.getElementById('btnUnlockPin').addEventListener('click', attemptUnlock);
+    pinUnlockInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') attemptUnlock();
+    });
+
+    document.getElementById('btnSaveCustomPin').addEventListener('click', () => {
+      const newPin = document.getElementById('customPinInput').value.trim();
+      if (newPin.length < 4) {
+        setStatus('Le code PIN doit contenir au moins 4 chiffres.', true);
+        return;
+      }
+      localStorage.setItem('pulse_custom_pin', newPin);
+      document.getElementById('customPinInput').value = '';
+      setStatus('Nouveau code PIN privé enregistré ✓');
+    });
+
+    document.getElementById('btnLockNow').addEventListener('click', () => {
+      localStorage.removeItem('pulse_pin_unlocked');
+      pinPromptText.textContent = 'Accès Privé Verrouillé • Entrez votre code PIN';
+      pinPromptText.style.color = '#94A3B8';
+      pinLockOverlay.style.display = 'flex';
+    });
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = String(reader.result || '');
+          resolve(res.split(',')[1] || '');
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Boot
+    (async () => {
+      recordings = await getAllRecordings();
+      if (recordings.length > 0) {
+        selectedId = recordings[0].id;
+      }
+      renderLibrary();
+      loadSelectedIntoStudio();
+    })();
+  </script>
+</body>
+</html>
